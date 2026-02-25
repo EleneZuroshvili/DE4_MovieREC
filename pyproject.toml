@@ -7,4 +7,6 @@ dependencies = [
     "litellm",
     "boto3",
     "jupyter",
+    "chromadb",
+    "pysqlite3"
 ]

@@ -1,5 +1,5 @@
 # Base image: Microsoft Dev Containers Python 3.13 (used by GitHub Codespaces)
-FROM mcr.microsoft.com/devcontainers/python:3.13-bullseye
+FROM mcr.microsoft.com/devcontainers/python:3.13-bookworm
 
 # OCI labels for GitHub Container Registry
 LABEL org.opencontainers.image.source=https://github.com/zoltanctoth/ceu-ai-engineering-class
@@ -13,7 +13,13 @@ RUN ARCH=$(uname -m) && \
     ./aws/install && \
     rm -rf awscliv2.zip aws
 
-    
+# Install build dependencies for pysqlite3 from source
+RUN rm -f /etc/apt/sources.list.d/yarn.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Switch to vscode user for UV installation
 USER vscode
 
@@ -29,4 +35,5 @@ WORKDIR /workspaces/ceu-ai-engineering-class
 COPY --chown=vscode:vscode pyproject.toml uv.lock .python-version ./
 
 # Create virtual environment and install dependencies using UV
-RUN uv sync --frozen
+# --no-binary pysqlite3 forces source build against system libsqlite3-dev (works on both amd64 and arm64)
+RUN uv sync --frozen --no-binary-package pysqlite3
