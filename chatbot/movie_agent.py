@@ -82,26 +82,7 @@ def movie_lookup_tool(query: str, max_results: int = 5) -> str:
     return "Movie Search Results:\n\n" + "\n".join(formatted)
 
 
-# --- Sub-Agent 1: Movie Database Agent (RAG) ---
-movie_db_agent = Agent(
-    name="Movie Database Agent",
-    instructions="""
-    You are a movie database search tool. Search and return results.
-
-    Steps:
-    1. Use movie_lookup_tool with the query you receive.
-    2. Return the EXACT results from the tool. Do NOT summarize or omit movie titles.
-    3. Copy the full list of movies with their titles, genres, and overviews.
-
-    IMPORTANT: Your output must include every movie title returned by the tool.
-    Do NOT paraphrase. Just pass the results through.
-    """,
-    model=RAG_MODEL,
-    tools=[bedrock_tool(movie_lookup_tool.__dict__)],
-)
-
-
-# --- Sub-Agent 2: Profile Builder Agent ---
+# --- Sub-Agent: Profile Builder Agent ---
 profile_builder_agent = Agent(
     name="Profile Builder Agent",
     instructions="""
@@ -128,12 +109,7 @@ profile_builder_agent = Agent(
 )
 
 
-# --- Convert sub-agents to tools for the orchestrator ---
-movie_search_tool = movie_db_agent.as_tool(
-    tool_name="movie-database-search",
-    tool_description="Search the movie database for recommendations based on a description of what the user wants. Pass a detailed description of the user's preferences.",
-)
-
+# --- Convert sub-agent to tool for the orchestrator ---
 profile_builder_tool = profile_builder_agent.as_tool(
     tool_name="profile-builder",
     tool_description="Analyze the user's message to build a movie preference profile. Pass the user's raw message about what kind of movie they want.",
@@ -149,11 +125,11 @@ movie_advisor = Agent(
     ## Workflow (ALWAYS follow these steps)
 
     1. Use the profile-builder tool to understand what the user wants.
-    2. Use the movie-database-search tool to find matching movies.
-    3. List the movies from the search results as a numbered list.
+    2. Use the movie_lookup_tool to search the database with the profile.
+    3. List ALL movies from the search results as a numbered list.
 
     For follow-ups ("something similar", "more like that", "find X"):
-    - Use movie-database-search with a refined query. ALWAYS list the results.
+    - Use movie_lookup_tool with a refined query. ALWAYS list the results.
 
     ## OUTPUT FORMAT (MANDATORY)
 
@@ -172,5 +148,5 @@ movie_advisor = Agent(
     Be concise and friendly.
     """,
     model=ORCHESTRATOR_MODEL,
-    tools=[profile_builder_tool, movie_search_tool],
+    tools=[profile_builder_tool, bedrock_tool(movie_lookup_tool.__dict__)],
 )
